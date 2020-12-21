@@ -1,0 +1,84 @@
+#!/bin/bash
+
+Version=1.00
+Myname=${0##*/}
+
+<<'DOC'
+= gendoctest - test gendoc
+
+= Synopsis
+gendoctest [options] input	
+
+= Options
+-n		do nothing, but: this -n may be eaten by echo
+-h,--help	print this help and exit
+   --Help	print full documentation via less and exit
+-V,--version	print version and exit
+
+Examples:
+example	file	do something with |file|
+example -h	print help and exit
+example -V	print version and exit
+
+= Description
+This script gendoctest is a test for gendoc. Here is an item list:
+
+- the first item of this list comes in two separate lines; be sure that there is, in the
+  output, a space between /the/ and /output/.
+- this is the second item, it contains a second line starting with spaces, so
+    this must be in verbatim and has \LaTeX and <html> code in it
+- the third item also has a normal text <html> tag as well as verbatim |<html>|.
+- -n at start of line - is it there, in normal text?
+- |-n| at start of line - is it there, in verbatim?
+- A verbatim latex command |\multi\null|
+
+A table with some verbatim with a fixed-width first column:
+Hello_World!	
+	  Hello_World! (verbatim)
+	Hello_World! (normal text)
+X[1%]	
+	  X[1%] (verbatim)
+	X[1%] (normal text)
+$test1	
+	  $test2 (verbatim)
+	$test3 (normal text)!\test
+
+Another one, with two normal columns; some of the right cells are in verbatim
+because they start with white space:
+Hello_World!	Hello_World! (normal text)
+Hello_World!	  Hello_World! (verbatim)
+X[1%]		X[1%] (normal text)
+X[1%]		  X[1%] (verbatim)
+$test4		  $test5 (verbatim)
+$test6		$test7 (normal text)
+
+Next test:
+-n at start of line - is it there?
+
+|-n| at start of line - is it there?
+
+= Author
+[Wybo Dekker](wybo@dekkerdocumenten.nl)
+
+= Copyright
+Released under the [GNU General Public License](www.gnu.org/copyleft/gpl.html)
+DOC
+
+if ! options=$(getopt \
+   -n "$Myname" \
+   -o hHVIn \
+   -l help,Help,version \
+   -- "$@"
+); then exit 1; fi
+eval set -- "$options"
+while [ $# -gt 0 ]; do
+   case $1 in
+   (-h|--help)    helpsrt;;
+   (-H|--Help)    helpall;;
+   (-V|--version) echo $Version; exit;;
+   (-I)           instscr;;
+   (-n)		  exit;;
+   (--)           shift;  break;;
+   (*)			  break;;
+   esac
+done
