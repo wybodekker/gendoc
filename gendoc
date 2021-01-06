@@ -160,40 +160,127 @@ REd='\e[38;5;9m' Mag='\e[38;5;5m' Nor='\e[0m'
     die() { local i; for i; do echo -e "$Myname: $REd$i$Nor"; done 1>&2; exit 1; }
    Warn() { local i; for i; do echo -e "$Myname: $Mag$i$Nor"; done 1>&2; }
 helpsrt() { sed -n '/^= Synopsis/,/^= /p' "$0"|sed '1d;$d'; exit; }
-
-# shellcheck disable=SC2154
 helpall() { sed -n "/^:<<'DOC'$/,/^DOC/p" "$0"|sed -n '1d;$d;p'|
 	    less -Ps"$Myname-${Version/./·} documentation - type h for help, q to quit."
 		exit
 	  }
 
-:<<'DOC' #------ function verb ----------------------------------------
-= verb
-parameters:	1+: strings to print
-description:	Prints the argument to stderr, but only if
-		verbose=true
-globals  set:	-
-globals used:	verbose
-returns:	0
+:<<'DOC' #----------------------------------------------------------------------
+= excheck
+synopsis:	 excheck executable1 [executable2...]
+description:	check if all needed execs are there and getopt is GNU
 DOC
-#---------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+excheck() {
+   local ok=true i
+   for i; do 
+      command -v "$i" > /dev/null && continue
+      Warn "Missing executable: $i"
+      ok=false
+   done
+   $ok || die
+   getopt -T 
+   [[ $? -ne 4 ]] && die "Your getopt is not GNU"
+   i=$(unzip -h|head -1|cut -c7-10)
+   [[ ${i:0:1} -ge 6 ]] ||tv die "Your unzip is too old (version $i)"
+}
+
+:<<'DOC' #----------------------------------------------------------------------
+= handle_options
+synopsis:	 handle_options "$@" || set "${args[@]}"
+description:	handle the options.
+globals used:	 Myname Version
+globals set	 args debug verbose index outext
+returns:	the number of remaining arguments
+DOC
+#-------------------------------------------------------------------------------
+handle_options() {
+   local options
+   if ! options=$(getopt \
+      -n "$Myname" \
+      -o hHVIvwpgdnm \
+      -l help,Help,verbose,version,html,pdf,debug,noindex,man -- "$@"
+   ); then exit 1; fi
+   eval set -- "$options"
+   
+     debug=false
+     index=true
+   verbose=false
+   outext=()
+   
+   while [ $# -gt 0 ]; do
+      case $1 in
+      (-h|--help)	# print this help and exit
+			helpsrt
+			;;
+      (-H|--Help)	# print full documentation via less and exit
+			helpall
+			;;
+      (-V|--version)	# print version and exit
+			echo $Version
+			exit
+			;;
+      (-v|--verbose)	# print some intermediate messages
+			verbose=true
+			shift
+			;;
+      (-p|--pdf)	# generate a PDF file
+			outext+=(pdf)
+			shift
+			;;
+      (-w|--web)	# generate a web page
+			outext+=(html)
+			shift
+			;;
+      (-m|--man)	# generate a man page
+			outext+=(1)
+			shift
+			;;
+      (-n|--noindex)	# do not (re)generate an index
+			index=false
+			shift
+			;;
+      (-d|--debug)	# set debug flag: keep intermediate files for inspection
+			debug=true
+			shift
+			;;
+      (-I)		instscript "$0" || 
+			   die 'the -I option is for developers only'
+			exit
+			;;
+      (--) shift	break
+			;;
+      (*)  break	;;
+      esac
+   done
+   args=( "$@" )
+   return ${#args}
+}
+
+:<<'DOC' #----------------------------------------------------------------------
+= verb
+synopsis:	 verb string [string...]
+description:	Prints the argument to stderr, but only if |verbose=true|
+globals used:	verbose
+DOC
+#-------------------------------------------------------------------------------
 verb() {
    $verbose && printf '%s\n' "$@" 1>&2
 }
 
 # find script's type, version, short description
 
-:<<'DOC' #------ function info ----------------------------------------
+:<<'DOC' #----------------------------------------------------------------------
 = info
-parameters:	1: the script to inspect
+synopsis:	 info script
 description:	Find script's type, version, short description.
-		see /scriptinfo/ for more information.
-		die if any if these cannot be found.
-globals  set:	scriptversion type short progorscript
+		See /scriptinfo/ for more information.
+		Dies if any if these cannot be found.
+globals  set:	 scriptversion type short progorscript
 globals used:	-
 returns:	0
 DOC
-#---------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 info() {
    scriptversion='' type='' short='' progorscript='script'
    local missing='' i
@@ -211,55 +298,51 @@ info() {
    verb "$1 is a $progorscript"
 }
 
-:<<'DOC' #------ function indx ----------------------------------------
+:<<'DOC' #----------------------------------------------------------------------
 = indx
-parameters:	-
 description:	make new index in html directory
 globals  set:	(via /scriptinfo/) type short scriptversion
-globals used:	type short bindir
-returns:	0
+globals used:	type short bindir indexheader
 DOC
-#---------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 indx() {
    local i script
    verb "creating index.html in $PWD"
    set +f
    ( printf '%s\n' "$indexheader"
-     printf '%s\n' '<html><head><title>gendoc index</title></head><body><div><table>'
+     printf '<html><head><title>gendoc index</title></head><body><div><table>\n'
      for i in *.html; do
        [[ $i =~ ^index.html$ ]] && continue
        script="$bindir/${i%.html}"
        # just in case somebody removed a script, but not its html file:
        [[ -e $script ]] || { rm "$i"; continue; }
        info "$script"
-       printf '%s\n' '<tr>
-	   <td><img src="img/'$type'.jpg" alt="'$type'"width="17"></td>
-	   <td><a href="'"$script"'">'"${i%.html}"'</a></td>
-	   <td><a href="'"$i"'"><img src="img/book.gif" alt="book" width="17"></a></td>
-	   <td>'$short'</td>
-	   </tr>'
+       printf '<tr>
+	   <td><img src="img/%s.jpg" alt="%s"width="17"></td>
+	   <td><a href="%s">%s</a></td>
+	   <td><a href="%s"><img src="img/book.gif" alt="book" width="17"></a></td>
+	   <td>%s</td>
+	   </tr>\n' "$type" "$type" "$script" "${i%.html}" "$i" "$short"
      done
-     printf '%s\n' '</table></div></body></html>'
+     printf '</table></div></body></html>\n'
    ) >index.html
 }
 
-:<<'DOC' #------ function fnd -----------------------------------------
+:<<'DOC' #----------------------------------------------------------------------
 = fnd
-parameters:	1: name of the script to be found
+synopsis:	 fnd scriptname
 description:	Find the script and set some globals, telling the
 		directory where the script is in, the basename of the
 		supposed to be in the current directory.
-globals  set:	   bindir base type
-globals used:	   indexheader
-returns:	1 on error, 0 otherwise.
+globals set:	 bindir base type
 DOC
-#---------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 fnd() {
    local arg
    arg=$(command -v "$1")
-   if [ -z "$arg" ]; then
+   if [[ -z $arg ]]; then
       # not found in path; try if it exists:
-      if [ -e "$1" ]; then
+      if [[ -e $1 ]]; then
 	 arg="$1"
       else
 	 die "$1 does not exist and is not in your path"
@@ -272,16 +355,15 @@ fnd() {
    [[ -z $type ]] && Warn "Missing shebang line in $base"
 }
 
-:<<'DOC' #------ function rline ---------------------------------------
+:<<'DOC' #----------------------------------------------------------------------
 = rline
-parameters:	-
 description:	if repeat = false, read a line into variable line, if
 		it´s true, leave the previous value in line.
 globals  set:	 line lineno eof repeat
 globals used:	 repeat
 returns:	1 on EOF
 DOC
-#---------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 rline() {
    if $repeat; then
       repeat=false
@@ -295,30 +377,25 @@ rline() {
    fi
 }
 
-:<<'DOC' #------ function prverb --------------------------------------
+:<<'DOC' #----------------------------------------------------------------------
 = prverb
-parameters:	1: string
+synopsis:	 prverb string
 description:	print the string verbatim
-globals  set:	
 globals used:	 sedverb
-returns:	
 DOC
-#---------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 prverb() {
    printf "%s" "$@"|sed -e "$sedverb"
 }
 
-:<<'DOC' #------ function tabrow --------------------------------------
+:<<'DOC' #----------------------------------------------------------------------
 = tabrow
-parameters:	1: string with 2 tab-separated cells
-description:	prints the two cells; if cell 2 is empty, cell 1 is
-		printed over 2 cols; if cell 2 starts with whitespace,
-		print it verbatim
-globals  set:	
-globals used:	 line brow mrow wrow wmrow erow bverb everb
-returns:	
+description:	Prints the two tab separated cells in |line|.
+		If cell 2 is empty, cell 1 is printed over 2 cols.
+		If cell 2 starts with whitespace, print it verbatim.
+globals used:	 line brow mrow wrow wmrow erow bverb everb ext
 DOC
-#---------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 tabrow() {
    local a="${line%%	*}" # left column
    local b="${line##*	}"  # right column
@@ -347,15 +424,13 @@ tabrow() {
    fi
 }
 
-:<<'DOC' #------ function printout ------------------------------------
+:<<'DOC' #----------------------------------------------------------------------
 = printout
-parameters:	1: string, possibly containing bar pairs
-description:	prints the string, with item between bars in verbatim
-globals  set:	
-globals used:	
-returns:	
+synopsis:	 printout string
+description:	Prints the string, with items between bars in verbatim
+globals used:	 sedtext sedcode
 DOC
-#---------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 printout() {
    local s i ar
    test -z "$1" && return
@@ -381,10 +456,11 @@ printout() {
    done     
 }
 
-:<<'DOC' #------ function cpurl ----------------------------------------
+:<<'DOC' #----------------------------------------------------------------------
 = cpurl
-parameters:	1: string
-description:	url's are of the form |[X](Y)|.
+synopsis:	 cpurl string
+description:	Prints the argument with converted/protected links.
+		URL's are of the form |[X](Y)|.
 		This function finds them in a string and converts them
 		in advance, protecting |/|'s, |<|'s, |>|'s and |\|'s
 		with U+2620, U+2621, U+2622 and U+2623 respectively. 
@@ -400,11 +476,9 @@ description:	url's are of the form |[X](Y)|.
 		For man pages, |http://| and |mailto:| prefixes are
 		not needed, and |[X](Y)| will be replaced with |Y (X)|
 		or, if |X| and |Y| are identical, with just |X|. 
-globals  set:	-
 globals used:	  ext
-returns:	the argument with converted/protected links
 DOC
-#----------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 cpurl() { local lnk txt lft rgt arg parens
    arg="$1 "
    if [[ $arg =~ (.*)\[([^\]]*)\]\(([^\)]+)\)(.*) ]]
@@ -441,30 +515,29 @@ cpurl() { local lnk txt lft rgt arg parens
 
    case "$ext" in
    (1)    if $parens; then
-	     printf "%s" "$lft$txt ($lnk)$rgt"
+	     printf '%s (%s)%s' "$lft$txt" "$lnk" "$rgt"
 	  else
-	     printf '%s' "$lft$txt$rgt"
+	     printf '%s' "$☣href{lft$txt$rgt"
 	  fi
 	  ;;
    (html) # protect /<> with U+2620-2622 (☠☡☢)
-	  printf "%s" "$lft☡a href=\"$lnk\"☢$txt☡☠a☢$rgt"
+	  printf '%s☡a href="%s"☢%s☡☠a☢%s' "$lft" "$lnk" "$txt" "$rgt"
 	  ;;
    (pdf)  # protect \ with U+2623 (☣)
-	  printf "%s" "$lft☣href{$lnk}{$txt}$rgt"
+	  printf '%s☣href{%s}{%s}%s' "$lft" "$lnk" "$txt" "$rgt"
 	  ;;
    esac
 }
 
-:<<'DOC' #------ function do_presets ----------------------------------
+:<<'DOC' #----------------------------------------------------------------------
 = do_presets
-parameters:	1: the output extension, pdf or html
+synopsis:	 do_presets extension
 description:	Preset many global variables, depending on the output
-		extension (html or pdf)
-returns:	-
+		extension (html, pdf or 1)
 globals  set:	too many to report here
 globals used:	 base type progorscript scriptversion bindir
 DOC
-#---------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 do_presets () {
    generated='doc generated from the script with '
    refgendoc='http://www.dekkerdocumenten.nl/unix/doc/gendoc.html'
@@ -818,70 +891,10 @@ do_presets () {
    esac
 }
 
-missing=()
-for i in getopt mk scriptinfo sed utf82html uudecode lualatex; do
-    command -v $i >/dev/null || missing+=("$i")
-done
-[[ ${#missing[@]} -gt 0 ]] && die "missing executables: ${missing[*]}"
+excheck getopt mk scriptinfo sed utf82html uudecode lualatex
 
-if ! options=$(getopt\
-   -n "$Myname" \
-   -o hHVIvwpgdnm \
-   -l help,Help,verbose,version,html,pdf,debug,noindex,man -- "$@"
-); then exit 1; fi
-eval set -- "$options"
-  debug=false
-  index=true
-verbose=false
-outext=()
-
-while [ $# -gt 0 ]; do
-   case $1 in
-   (-h|--help)		# print this help and exit
-	helpsrt
-	;;
-   (-H|--Help)		# print full documentation via less and exit
-	helpall
-	;;
-   (-V|--version)	# print version and exit
-	echo $Version
-	exit
-	;;
-   (-v|--verbose)	# print some intermediate messages
-	verbose=true
-	shift
-	;;
-   (-p|--pdf)		# generate a PDF file
-	outext+=(pdf)
-	shift
-	;;
-   (-w|--web)		# generate a web page
-	outext+=(html)
-	shift
-	;;
-   (-m|--man)		# generate a man page
-	outext+=(1)
-	shift
-	;;
-   (-n|--noindex)	# do not (re)generate an index
-	index=false
-	shift
-	;;
-   (-d|--debug)		# set debug flag: keep intermediate files for inspection
-	debug=true
-	shift
-	;;
-   (-I)	instscript "$0" || 
-	die 'the -I option is for developers only'
-	exit
-	;;
-   (--)	shift
-	break
-	;;
-   (*)	break
-	;;
-   esac
-done
+handle_options "$@" || set "${args[@]}"
+test $# -eq 1 || die "I need 1 input file"
 
 fnd "$1"
 
@@ -894,7 +907,7 @@ cat <<-EOF 1>&2
 [[ ${#outext} -eq 0 ]] && outext=(1 pdf html)
 for ext in "${outext[@]}"; do
    outfile="$base.${ext/pdf/tex}"
-   do_presets "$ext" aa0000
+   do_presets "$ext"
    cd "$docdir" || die "could not cd to $docdir"
    verb "running in $docdir"
    
