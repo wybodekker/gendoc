@@ -254,7 +254,6 @@ handle_options() {
       esac
    done
    args=( "$@" )
-   return ${#args}
 }
 
 :<<'DOC' #----------------------------------------------------------------------
@@ -893,7 +892,9 @@ do_presets () {
 
 excheck getopt mk scriptinfo sed utf82html uudecode lualatex
 
-handle_options "$@" || set "${args[@]}"
+handle_options "$@"
+set -- "${args[@]}"
+
 test $# -eq 1 || die "I need 1 input file"
 
 fnd "$1"
