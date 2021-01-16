@@ -160,10 +160,8 @@ REd='\e[38;5;9m' Mag='\e[38;5;5m' Nor='\e[0m'
     die() { local i; for i; do echo -e "$Myname: $REd$i$Nor"; done 1>&2; exit 1; }
    Warn() { local i; for i; do echo -e "$Myname: $Mag$i$Nor"; done 1>&2; }
 helpsrt() { sed -n '/^= Synopsis/,/^= /p' "$0"|sed '1d;$d'; exit; }
-helpall() { sed -n "/^:<<'DOC'$/,/^DOC/p" "$0"|sed -n '1d;$d;p'|
-	    less -Ps"$Myname-${Version/./·} documentation - type h for help, q to quit."
-		exit
-	  }
+helpall() { sed -n "/^:<<'DOC'$/,/^DOC/p" "$0"|sed '1d;$d'|
+            less -P"$Myname-${Version/./·} (press h for help, q to quit)";exit; }
 
 :<<'DOC' #----------------------------------------------------------------------
 = excheck
@@ -187,7 +185,7 @@ excheck() {
 
 :<<'DOC' #----------------------------------------------------------------------
 = handle_options
-synopsis:	 handle_options "$@" || set "${args[@]}"
+synopsis:	 handle_options "$@"
 description:	handle the options.
 globals used:	 Myname Version
 globals set	 args debug verbose index outext
@@ -248,9 +246,11 @@ handle_options() {
 			   die 'the -I option is for developers only'
 			exit
 			;;
-      (--) shift	break
+      (--) 		shift
+			break
 			;;
-      (*)  break	;;
+      (*)  		break
+			;;
       esac
    done
    args=( "$@" )
@@ -1050,7 +1050,7 @@ for ext in "${outext[@]}"; do
 	    verb "extract the DOC sections"
 	    sed -n -e "/^:\?<<'DOC'/,/^DOC/{/^DOC/d;s/^:\?<<'DOC'.*/===/;p}" "$bindir/$base" >"$tmp"
 	    # join lines starting with a tab and a non-space character, to fill available space
-	    sed '/^\t\+[^ ]/!{p;d}; :a; N; s/\n\t\+\([^ ]\)/ \1/;ta' $tmp
+	    sed '/^\t\+[^ ]/!{p;d}; :a; N; s/\n\t\+\([^ ]\)/ \1/;ta' "$tmp"
 	 fi
       ) |
       sed -e 's/<pre><\/pre>//g;	     # remove empty <pre>s
@@ -1062,7 +1062,8 @@ for ext in "${outext[@]}"; do
    
    if [[ $ext == pdf ]]; then 
       mk --noprint --noview "$outfile" || 
-	 die "$Myname: Here's the directory where I produced and compiled the latex file: $PWD"
+	 die "$Myname: Here's the directory where I produced and" \
+	     "compiled the latex file: $PWD"
       test -e "$base.pdf" || die "$base.pdf not found after compilation"
       $debug || rm -f "$base".{aux,fls,log,out,tex,synctex.gz}
    elif [[ $ext == html ]]; then
