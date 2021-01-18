@@ -604,7 +604,7 @@ do_presets () {
 	 printf '<span class="big">%s</span>\n' "$1"
 	 printf '<span class="kop">%s</span>\n' "$2"
 	 printf '<hr class="bot"/>\n'
-	 printf '<div class="left">%s<a href="%s">%s</a>\n' "$generated" "$refgendoc" "$1"
+	 printf '<div class="left">%s<a href="%s">gendoc</a>\n' "$generated" "$refgendoc"
 	 printf '</div>\n'
 	 printf '<div class="right">%s %s, version=%s\n' "$type" "$progorscript" "$scriptversion"
 	 printf "%s" "$validator"
@@ -831,8 +831,8 @@ do_presets () {
       HEAD() { # basename shortdesc 
 	 printf '\KOP{\color{kopred}\Huge %s\large\quad %s}\n' \
       				  "$1"     "${2//_/\\_}"
-	 printf '\makebox[\hsize][r]{\scriptsize %s \href{%s}{%s}\hfill ' \
-      				      "$generated"   "$refgendoc" "$1"
+	 printf '\makebox[\hsize][r]{\scriptsize %s \href{%s}{gendoc}\hfill ' \
+      				      "$generated"   "$refgendoc"
 	 printf '%s %s, version=%s}\n' "$type" \
       	 "$progorscript" "$scriptversion"
       }
