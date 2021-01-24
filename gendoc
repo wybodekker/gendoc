@@ -11,27 +11,22 @@ shopt -s extglob
 gendoc [options] script	
 
 == Options
+
 -h|--help	print this help and exit
 -H|--Help	print full documentation via less and exit
 -V|--version	print version and exit
--v|--verbose	print some intermediate messages
--p|--pdf	generate a PDF file
--w|--web	generate a web page
 -m|--man	generate a man page
 -n|--noindex	do not (re)generate an index
--d|--debug	set debug flag: keep intermediate files for inspection
+-p|--pdf	generate a PDF file
+-v|--verbose	print some intermediate messages
+-w|--web	generate a web page
 
 The argument /script/ must be a script containing gendoc-formatted (see
 below) documentation. If the argument is an absolute path, that path is
 followed to find the script; otherwise it is searched in your PATH; if the
 search fails, the script is supposed to be in the current directory.
 
-Requires:
-- sed, should be in your Linux distribution,
-- getopt, same (package util-linux),
-- uudecode, same (package sharutils),
-- lualatex, same (package texlive)
-- [utf8html](bitbucket.org/wybodekker/utf82html)
+Requires: [utf8html](github.com/wybodekker/utf82html)
 
 = Description
 gendoc is a Bash script that looks for gendoc-formatted documentation in a
@@ -188,20 +183,19 @@ excheck() {
 synopsis:	 handle_options "$@"
 description:	handle the options.
 globals used:	 Myname Version
-globals set	 args debug verbose index outext
+globals set	 args verbose index outext
 returns:	the number of remaining arguments
 DOC
 #-------------------------------------------------------------------------------
 handle_options() {
    local options
-   if ! options=$(getopt \
+   options=$(getopt \
       -n "$Myname" \
-      -o hHVIvwpgdnm \
-      -l help,Help,verbose,version,html,pdf,debug,noindex,man -- "$@"
-   ); then exit 1; fi
+      -o hHVIvwpgnm \
+      -l help,Help,verbose,version,html,pdf,noindex,man -- "$@"
+   ) ||exit 1
    eval set -- "$options"
    
-     debug=false
      index=true
    verbose=false
    outext=()
@@ -218,18 +212,6 @@ handle_options() {
 			echo $Version
 			exit
 			;;
-      (-v|--verbose)	# print some intermediate messages
-			verbose=true
-			shift
-			;;
-      (-p|--pdf)	# generate a PDF file
-			outext+=(pdf)
-			shift
-			;;
-      (-w|--web)	# generate a web page
-			outext+=(html)
-			shift
-			;;
       (-m|--man)	# generate a man page
 			outext+=(1)
 			shift
@@ -238,8 +220,16 @@ handle_options() {
 			index=false
 			shift
 			;;
-      (-d|--debug)	# set debug flag: keep intermediate files for inspection
-			debug=true
+      (-p|--pdf)	# generate a PDF file
+			outext+=(pdf)
+			shift
+			;;
+      (-v|--verbose)	# print some intermediate messages
+			verbose=true
+			shift
+			;;
+      (-w|--web)	# generate a web page
+			outext+=(html)
 			shift
 			;;
       (-I)		instscript "$0" || 
@@ -890,7 +880,7 @@ do_presets () {
    esac
 }
 
-excheck getopt mk scriptinfo sed utf82html uudecode lualatex
+excheck getopt scriptinfo utf82html uudecode lualatex
 
 handle_options "$@"
 set -- "${args[@]}"
@@ -905,7 +895,7 @@ cat <<-EOF 1>&2
 	version: ${scriptversion:-?????}
 	EOF
 
-[[ ${#outext} -eq 0 ]] && outext=(1 pdf html)
+(( ${#outext} == 0 )) && outext=(1 pdf html)
 for ext in "${outext[@]}"; do
    outfile="$base.${ext/pdf/tex}"
    do_presets "$ext"
@@ -1041,31 +1031,36 @@ for ext in "${outext[@]}"; do
 	 break
       }
    done < <(
-	 if [[ $(file --mime-encoding "$bindir/$base") =~ binary ]]; then
-	    verb "binary file: get the DOC with the -h option"
-	    "$bindir/$base" -h
-	 else
-	    tmp=$(mktemp -t "$Myname".XXXXXXXXXX)
-	    trap 'rm -rf $tmp' 0 1 2 15
-	    verb "extract the DOC sections"
-	    sed -n -e "/^:\?<<'DOC'/,/^DOC/{/^DOC/d;s/^:\?<<'DOC'.*/===/;p}" "$bindir/$base" >"$tmp"
-	    # join lines starting with a tab and a non-space character, to fill available space
-	    sed '/^\t\+[^ ]/!{p;d}; :a; N; s/\n\t\+\([^ ]\)/ \1/;ta' "$tmp"
-	 fi
-      ) |
-      sed -e 's/<pre><\/pre>//g;	     # remove empty <pre>s
-	      s/‡\\‡/‡\\ ‡/g;		     # make ‡\‡ possible in latex
-	      s/☠/\//g;s/☣/\\/g;s/☡/</g;s/☢/>/g # restore [/\<>]
-	     '|
-      $utf82html >>"$outfile"
-   
+      if [[ $(file --mime-encoding -bL "$bindir/$base") == binary ]]; then
+         verb "binary file: get the DOC with the -h option"
+         "$bindir/$base" -h
+      else
+         tmp=$(mktemp -t "$Myname".XXXXXXXXXX)
+         verb "extract the DOC sections"
+         sed -n "
+             /^:\?<<'DOC'/,/^DOC/{
+                     /^DOC/d
+                     s/^:\?<<'DOC'.*/===/
+                     p
+             }" "$bindir/$base" >"$tmp"
+         # join lines starting with a tab and a non-space character,
+         # to fill available space
+         sed '/^\t\+[^ ]/!{p;d}; :a; N; s/\n\t\+\([^ ]\)/ \1/;ta' "$tmp"
+      fi
+      rm "$tmp"
+   ) |
+   sed -e 's/<pre><\/pre>//g;             # remove empty <pre>s
+           s/‡\\‡/‡\\ ‡/g;                # make ‡\‡ possible in latex
+           s/☠/\//g;s/☣/\\/g;s/☡/</g;s/☢/>/g # restore [/\<>]
+          '|
+   $utf82html >>"$outfile"
    
    if [[ $ext == pdf ]]; then 
-      mk --noprint --noview "$outfile" || 
+      echo x | lualatex "$outfile" &>/dev/null ||
 	 die "$Myname: Here's the directory where I produced and" \
 	     "compiled the latex file: $PWD"
       test -e "$base.pdf" || die "$base.pdf not found after compilation"
-      $debug || rm -f "$base".{aux,fls,log,out,tex,synctex.gz}
+      rm -f "$base".{aux,fls,log,out,tex,synctex.gz}
    elif [[ $ext == html ]]; then
       $index && indx
    fi
