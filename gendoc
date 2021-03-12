@@ -917,7 +917,7 @@ for ext in "${outext[@]}"; do
       repeat=false
       while rline; do
 	 if [[ "$line" =~ ^==\ (.*) ]]; then
-	    printf '%s\n' "$headstart${BASH_REMATCH[1]}$headstop"
+	    printf '%s%s%s\n' "$headstart" "$(sed "$sedtext" <<<"${BASH_REMATCH[1]}")" "$headstop"
 	 elif [[ $line =~ ^===$ ]]; then
 	    # this is the start of a new documentation block
 	    # stop in case a man page is generated
