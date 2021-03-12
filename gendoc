@@ -257,8 +257,6 @@ verb() {
    $verbose && printf '%s\n' "$@" 1>&2
 }
 
-# find script's type, version, short description
-
 :<<'DOC' #----------------------------------------------------------------------
 = info
 synopsis:	 info script
@@ -284,7 +282,6 @@ info() {
    done < <(scriptinfo --brief "$1")
    [[ -n $missing ]] && die "missing in $1: ${missing%, }"
    [[ $type == C ]] && progorscript=program
-   verb "$1 is a $progorscript"
 }
 
 :<<'DOC' #----------------------------------------------------------------------
@@ -842,7 +839,7 @@ do_presets () {
 	\usepackage[colorlinks]{hyperref}
 	\MakeShortVerb{‡}
 	\parindent0pt\parskip0ex\topsep0pt\partopsep0pt
-	\def\kop#1{\section*{#1}\vskip-2ex}
+	\def\kop#1{\section*{\normalsize #1}\vskip-2ex}
 	\def\Kop#1{\section*{\large #1}\vskip-2ex}
 	\def\KOP#1{\section*{#1}\vskip-4ex\textcolor{kopred}{\hrulefill}\\[-.5ex]}
 	\def\Red#1{\textcolor{red}{#1}}
