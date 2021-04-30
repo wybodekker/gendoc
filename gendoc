@@ -385,7 +385,7 @@ prverb() {
 description:	Prints the two tab separated cells in |line|.
 		If cell 2 is empty, cell 1 is printed over 2 cols.
 		If cell 2 starts with whitespace, print it verbatim.
-globals used:	 line brow mrow wrow wmrow erow bverb everb ext
+globals used:	 line brow mrow erow bRow eRow bverb everb ext
 DOC
 #-------------------------------------------------------------------------------
 tabrow() {
@@ -394,7 +394,7 @@ tabrow() {
    [[ $ext == pdf ]] && [[ ! $b =~ \  ]] && b=${b//%/\\%}
    if test -z "$b"; then
       # cell 2 is empty; print cell 1, verbatim, over 2 cols
-      printf '%s\n' "$wrow$bverb$a$everb$wmrow$erow"
+      printf '%s\n' "$bRow$bverb$a$everb$eRow"
    else
       # cell 2 non-empty: print cell 1, verbatim if non-empty in col 1
       printf "%s" "$brow"
@@ -538,30 +538,30 @@ do_presets () {
    case $1 in
    (html) 
       bcode='<pre>'
-      bcompact='<ul><li>'
-      brow='<tr><td>'
-      btablX='<table>'
-      btabpX='<table><colgroup><col style="width:10%"/><col style="width:90%"/></colgroup><tr><td></td><td></td></tr>'
-      bverb='<pre>'
       ecode="</pre>"
+      bcompact='<ul><li>'
       ecompact='</li></ul>'
       edoc='</div></div></body></html>'
+      bHead='<h1' # closing > see kopcolor
+      eHead='</h1>'
+      bhead='<h4>'
+      ehead='</h4>'
+      bRow='<tr><td colspan="2">'
+      eRow='</td></tr>'
+      brow='<tr><td>'
+      mrow='</td><td>'
       erow='</td></tr>'
+      btablX='<table>'
+      btabpX='<table><colgroup><col style="width:10%"/><col style="width:90%"/></colgroup><tr><td></td><td></td></tr>'
       etab='</table>'
+      bverb='<pre>'
       everb='</pre>'
       ext=html
       functionsused="<h1>Functions used:</h1>"
-      Headstart='<h1' # closing > see kopcolor
-      headstart='<h4>'
-      Headstop='</h1>'
-      headstop='</h4>'
       horrule="<hr/>"
       item="</li><li>"
       kopcolor='>'
-      mrow='</td><td>'
       par='<p>'
-      wmrow=''
-      wrow='<tr><td colspan="2">'
 
       sedtext='
 	s/&/\&amp;/g	# & → &amp;
@@ -722,28 +722,28 @@ do_presets () {
       ;;
    (1)
       bcode="$n.PP"
-      bcompact="$n.IP ‣ 2"
-      brow='.B '
-      btablX="$n"
-      btabpX="$n"
-      bverb=''
       ecode="$n.PP"
+      bcompact="$n.IP ‣ 2"
       ecompact="$n.PP$n"
       edoc=''
+      bHead="$n.SH "
+      eHead=''
+      bhead="$n.SS "
+      ehead=''
+      eRow=''
+      bRow='.B '
+      brow='.B '
+      mrow="$n.RS$n"
       erow="$n.RE"
+      btablX="$n"
+      btabpX="$n"
       etab="$n.PP"
+      bverb=''
       everb=''
       ext=1
-      Headstart="$n.SH "
-      headstart="$n.SS "
-      Headstop=''
-      headstop=''
       item="$n.IP ‣ 2"
       kopcolor=''
-      mrow="$n.RS$n"
       par="$n.PP"
-      wmrow=''
-      wrow='.B '
 
       sedcode='s/\\/\\\\/g;s/ /␣/g'
       sedtext='
@@ -772,41 +772,44 @@ do_presets () {
       
    (pdf)
       bcode='\begin{code}'
-      bcompact='\begin{compactitem}\item '
-      brow=
-      btablX='\par\begin{tabularx}{\textwidth}[l]{@{}lX@{}}'
-      btabpX='\par\begin{tabularx}{\textwidth}[l]{@{}p{10mm}X@{}}'
-      bverb='\V‡'
       ecode='\end{code}'
+      bcompact='\begin{compactitem}\item '
       ecompact='\end{compactitem}'
       edoc='\end{document}'
+      bHead='\Kop{'
+      eHead='}'
+      bhead='\kop{'
+      ehead='}'
+      bRow='\multicolumn{2}{@{}l@{}}{'
+      eRow="}\\\\"
+      brow=
+      mrow='&'
       erow="\\\\"
+      btablX='\par\begin{tabularx}{\textwidth}[l]{@{}lX@{}}'
+      btabpX='\par\begin{tabularx}{\textwidth}[l]{@{}p{10mm}X@{}}'
       etab='\end{tabularx}\par'
+      bverb='\V‡'
       everb='‡\K{}'
       ext=tex
       functionsused='\Kop{\color{kopred}Functions used:}\vskip-3ex'
-      Headstart='\Kop{'
-      headstart='\kop{'
-      Headstop='}'
-      headstop='}'
       horrule='\textcolor{gray}{\rule{\textwidth}{.1pt}}\\[-7ex]'
       item=' \item '
       kopcolor='\color{kopred}'
-      mrow='&'
       par='\par'
-      wmrow='}'
-      wrow='\multicolumn{2}{@{}l@{}}{'
 
       sedtext='
-	s/\\/&textbackslash{}/g						# \ → \textbackslash{}
-	s/\([_%$#&]\)/\\\1/g                                            # some tex-escapes
-	s/\/\([^/]*\)\//\I{\1}/g                                        # /.../ → \I{...}
-	s/\*\([^}]*\)\*/\B{\1}/g                                        # *...* → \B{...} 
-	s/\b\(Red\|Green\|Blue\|I\|B\|U\){\([^}]*\)}/\\\1{\2}/g         # \´s before the X{...} commands
-	s/→/\\MVRightarrow/g                                            # → replaced with marvosym command
-	s/\(^\|\s\)'$base'\(\s\|$\)/\1\\textbf{'${base//_/\\\\_}'\2}/g  # make scriptname bold
-	s/LoNeLyVeRtIcAlBaR/(\\V{\\textbar}\\K)/g                       # put singular "(|)" back
-	s/LoNeLySlAsH/(\\V{\/}\\K)/g                                    # put singular "(/)" back
+	s/\\/&textbackslash{}/g		# \ → \textbackslash{}
+	s/\([_%$#&]\)/\\\1/g            # some tex-escapes
+	s/\/\([^/]*\)\//\I{\1}/g        # /.../ → \I{...}
+	s/\*\([^}]*\)\*/\B{\1}/g        # *...* → \B{...} 
+	s/\b\(Red\|Green\|Blue\|I\|B\|U\){\([^}]*\)}/\\\1{\2}/g
+				        # \´s before the X{...} commands
+	s/→/\\MVRightarrow/g            # → replaced with marvosym command
+	s/\(^\|\s\)'$base'\(\s\|$\)/\1\\textbf{'${base//_/\\\\_}'\2}/g
+					# make scriptname bold
+	s/LoNeLyVeRtIcAlBaR/(\\V{\\textbar}\\K)/g
+					# put singular "(|)" back
+	s/LoNeLySlAsH/(\\V{\/}\\K)/g    # put singular "(/)" back
 	'
       sedcode='
 	s/ /␣/g
@@ -920,7 +923,7 @@ for ext in "${outext[@]}"; do
       repeat=false
       while rline; do
 	 if [[ "$line" =~ ^==\ (.*) ]]; then
-	    printf '%s%s%s\n' "$headstart" "$(sed "$sedtext" <<<"${BASH_REMATCH[1]}")" "$headstop"
+	    printf '%s%s%s\n' "$bhead" "$(sed "$sedtext" <<<"${BASH_REMATCH[1]}")" "$ehead"
 	 elif [[ $line =~ ^===$ ]]; then
 	    # this is the start of a new documentation block
 	    # stop in case a man page is generated
@@ -1016,7 +1019,7 @@ for ext in "${outext[@]}"; do
 	    elif [[ $line =~ ^=\ (.*) ]]; then
 	       i=${BASH_REMATCH[1]}
 	       [[ $ext == pdf ]] && i=${i//_/\\_}
-	       printf '%s\n' "$sep$Headstart$kopcolor$i$Headstop"
+	       printf '%s\n' "$sep$bHead$kopcolor$i$eHead"
 	    elif [[ -z $line ]]; then
 	       printf '%s\n' "$par"
 	    else
