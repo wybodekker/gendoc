@@ -274,7 +274,7 @@ info() {
       [scriptversion]='version'
       [type]='shebang line'
    )
-   for i in "${!vars[@]}"; do 
+   for i in short type scriptversion; do 
       read -r "${i?}"
       test "$(eval "echo \$$i")" == '<??>' && missing+="${vars[$i]}, "
    done < <(scriptinfo --brief "$1")
