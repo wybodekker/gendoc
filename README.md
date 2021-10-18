@@ -5,7 +5,7 @@
 |    type | bash
 |  author | Wybo Dekker
 |   email | wybo@dekkerdocumenten.nl
-| version | 2.00
+| version | 2.01
 | license | GNU General Public License
 
 gendoc is a Bash script that looks for gendoc-formatted documentation in a
