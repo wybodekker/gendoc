@@ -1,6 +1,6 @@
 #!/bin/bash
 
-Version=2.01
+Version=2.02
 Myname="${0##*/}"
 shopt -s extglob
 
@@ -70,10 +70,10 @@ possible.  Currently these are:
 |...|		prints the |...| as code in light blue typewriter
 		font. If you need to typeset a bar (|), enclose it in
 		parentheses; those are also typeset.
-*...*		does the same; if you need asterisks, offer them in
+*...*		prints the |...| in bold; if you need asterisks, offer them in
 		verbatim text, either between vertical bars or
 		space-prefixed lines.
-/.../		does the same; if you need slashes, offer them in
+/.../		prints the |...| italic; if you need slashes, offer them in
 		verbatim text, either between vertical bars or
 		space-prefixed lines.
 [...](...)	prints first argument and links it to url in the second
@@ -261,7 +261,7 @@ synopsis:	 info script
 description:	Find script's type, version, short description.
 		See /scriptinfo/ for more information.
 		Dies if any if these cannot be found.
-globals  set:	 scriptversion type short progorscript
+globals	 set:	 scriptversion type short progorscript
 globals used:	-
 returns:	0
 DOC
@@ -285,7 +285,7 @@ info() {
 :<<'DOC' #----------------------------------------------------------------------
 = indx
 description:	make new index in html directory
-globals  set:	(via /scriptinfo/) type short scriptversion
+globals	 set:	(via /scriptinfo/) type short scriptversion
 globals used:	type short bindir
 DOC
 #-------------------------------------------------------------------------------
@@ -296,9 +296,9 @@ indx() {
    ( printf '<!DOCTYPE html><!--gendoc-->
 	<html lang="en">
 	<head>
-  	<meta name="generator" content="gendoc" />
-  	<meta http-equiv="Content-type" content="text/html; charset=utf-8" />
-  	<title>gendoc index</title>
+	<meta name="generator" content="gendoc" />
+	<meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+	<title>gendoc index</title>
 	</head>
 	<body><div><table>
 	'
@@ -351,7 +351,7 @@ fnd() {
 = rline
 description:	if repeat = false, read a line into variable line, if
 		it´s true, leave the previous value in line.
-globals  set:	 line lineno eof repeat
+globals	 set:	 line lineno eof repeat
 globals used:	 repeat
 returns:	1 on EOF
 DOC
@@ -394,7 +394,7 @@ tabrow() {
    [[ $ext == pdf ]] && [[ ! $b =~ \  ]] && b=${b//%/\\%}
    if test -z "$b"; then
       # cell 2 is empty; print cell 1, verbatim, over 2 cols
-      printf '%s\n' "$bRow$bverb$a$everb$eRow"
+      printf '%s' "$bRow$bverb$a$everb$eRow"
    else
       # cell 2 non-empty: print cell 1, verbatim if non-empty in col 1
       printf "%s" "$brow"
@@ -412,7 +412,7 @@ tabrow() {
       else
 	 printout "$b"
       fi
-      printf '%s\n' "$erow"
+      printf '%s' "$erow"
    fi
 }
 
@@ -439,13 +439,13 @@ printout() {
 	 # text: surround with spaces, so that stuff needs not to be
 	 # found at line ends
 	 printf "%s" " $s " |
-     	 sed -e "$sedtext;s/^ //;s/ $//" # and remove the spaces
+	 sed -e "$sedtext;s/^ //;s/ $//" # and remove the spaces
       else
 	 # code:
 	 printf "%s" "$s" |
 	 sed -e "$sedcode"
       fi
-   done     
+   done	    
 }
 
 :<<'DOC' #----------------------------------------------------------------------
@@ -474,8 +474,8 @@ DOC
 cpurl() { local lnk txt lft rgt arg parens
    arg="$1 "
    if [[ $arg =~ (.*)\[([^\]]*)\]\(([^\)]+)\)(.*) ]]
-      #          ----  --------    --------  ----
-      #           lft    txt         lnk     rgt
+      #		 ----  --------	   --------  ----
+      #		  lft	 txt	     lnk     rgt
    then
       # left [text](url-link) right
       parens=true
@@ -506,7 +506,7 @@ cpurl() { local lnk txt lft rgt arg parens
    fi
 
    case "$ext" in
-   (1)    if $parens; then
+   (1)	  if $parens; then
 	     printf '%s (%s)%s' "$lft$txt" "$lnk" "$rgt"
 	  else
 	     printf '%s' "$☣href{lft$txt$rgt"
@@ -526,7 +526,7 @@ cpurl() { local lnk txt lft rgt arg parens
 synopsis:	 do_presets extension
 description:	Preset many global variables, depending on the output
 		extension (html, pdf or 1)
-globals  set:	too many to report here
+globals	 set:	too many to report here
 globals used:	 base type progorscript scriptversion bindir
 DOC
 #-------------------------------------------------------------------------------
@@ -567,14 +567,14 @@ do_presets () {
 	s/&/\&amp;/g	# & → &amp;
 	s/</\&lt;/g	# < → &lt;
 	s/>/\&gt;/g	# > → &gt;
-	s/\([^<]\)\/\([^/]*\)\([^<]\)\//\1<i>\2\3<\/i>/g      #  /.../ → <i>...</i>
-	s/\*\([^*]*\)\*/<b>\1<\/b>/g                          #  *...* → <b>...</b>
+	s/\([^<]\)\/\([^/]*\)\([^<]\)\//\1<i>\2\3<\/i>/g      #	 /.../ → <i>...</i>
+	s/\*\([^*]*\)\*/<b>\1<\/b>/g			      #	 *...* → <b>...</b>
 	s/\bRed{\([^}]*\)}/<span class="red">\1<\/span>/g     # Red{...} → <span class="red">...<\/span>
 	s/\bBlue{\([^}]*\)}/<span class="blue">\1<\/span>/g   # Blue{...} → <span class="blue">...<\/span>
 	s/\bGreen{\([^}]*\)}/<span class="green">\1<\/span>/g # Green{...} → <span class="green">...<\/span>
-	s/\(^\|\s\)'$base'\(\s\|$\)/\1<b><a href="..\/'$base'">'$base'<\/a><\/b>\2/g    # make scriptname a bold link if inside whitespace
+	s/\(^\|\s\)'$base'\(\s\|$\)/\1<b><a href="..\/'$base'">'$base'<\/a><\/b>\2/g	# make scriptname a bold link if inside whitespace
 	s/LoNeLyVeRtIcAlBaR/(<code>|<\/code>)/g # put singular "(|)" back
-	s/LoNeLySlAsH/(<code>\/<\/code>)/g      # put singular "(/)" back
+	s/LoNeLySlAsH/(<code>\/<\/code>)/g	# put singular "(/)" back
 	'
       sedcode='
 	s/&/\&amp;/g		# & → &amp;
@@ -721,41 +721,43 @@ do_presets () {
 	fi
       ;;
    (1)
-      bcode="$n.PP"
-      ecode="$n.PP"
+      bcode=""
+      ecode=""
       bcompact="$n.IP ‣ 2"
-      ecompact="$n.PP$n"
+      ecompact="$n"
       edoc=''
       bHead="$n.SH "
       eHead=''
       bhead="$n.SS "
       ehead=''
       eRow=''
-      bRow='.B '
-      brow='.B '
+      bRow=''
+      brow=''
       mrow="$n.RS$n"
       erow="$n.RE"
       btablX="$n"
       btabpX="$n"
-      etab="$n.PP"
-      bverb=''
+      etab="$n"
+      bverb="$n.B "
       everb=''
       ext=1
       item="$n.IP ‣ 2"
       kopcolor=''
-      par="$n.PP"
+      par="$n"
 
       sedcode='s/\\/\\\\/g;s/ /␣/g'
       sedtext='
-	s/LoNeLyVeRtIcAlBaR/(|)/g               # put singular (|) back
-	s/LoNeLySlAsH/(\/)/g                    # put singular (/) back
+	s/\([^<]\)\/\([^/]*\)\([^<]\)\//\1\\fI\2\3\\fR/g      #	 /.../ → \fI...\fR
+	s/\*\([^*]*\)\*/\\fB\1\\fR/g			      #	 *...* → \fB...\fR
+	s/LoNeLyVeRtIcAlBaR/(|)/g		# put singular (|) back
+	s/LoNeLySlAsH/(\/)/g			# put singular (/) back
       '
-      sedverb='s/-/\\-/g'
+      sedverb=''
 
       HEAD() { # base shortdesc 
 	printf '.TH %s 1 "%s" "%s version %s" "DekDoc scripts"
 		.SH NAME
-		.PP
+		
 		%s - %s
 	' "$1" "$(date +'%B %d, %Y')" "$1" "$scriptversion" "$1" "$2"
       }
@@ -799,17 +801,17 @@ do_presets () {
 
       sedtext='
 	s/\\/&textbackslash{}/g		# \ → \textbackslash{}
-	s/\([_%$#&]\)/\\\1/g            # some tex-escapes
-	s/\/\([^/]*\)\//\I{\1}/g        # /.../ → \I{...}
-	s/\*\([^}]*\)\*/\B{\1}/g        # *...* → \B{...} 
+	s/\([_%$#&]\)/\\\1/g		# some tex-escapes
+	s/\/\([^/]*\)\//\I{\1}/g	# /.../ → \I{...}
+	s/\*\([^}]*\)\*/\B{\1}/g	# *...* → \B{...} 
 	s/\b\(Red\|Green\|Blue\|I\|B\|U\){\([^}]*\)}/\\\1{\2}/g
-				        # \´s before the X{...} commands
-	s/→/\\MVRightarrow/g            # → replaced with marvosym command
+					# \´s before the X{...} commands
+	s/→/\\MVRightarrow/g		  # → replaced with marvosym command
 	s/\(^\|\s\)'$base'\(\s\|$\)/\1\\textbf{'${base//_/\\\\_}'\2}/g
 					# make scriptname bold
 	s/LoNeLyVeRtIcAlBaR/(\\V{\\textbar}\\K)/g
 					# put singular "(|)" back
-	s/LoNeLySlAsH/(\\V{\/}\\K)/g    # put singular "(/)" back
+	s/LoNeLySlAsH/(\\V{\/}\\K)/g	# put singular "(/)" back
 	'
       sedcode='
 	s/ /␣/g
@@ -838,9 +840,9 @@ do_presets () {
 	\usepackage{fontspec}
 	\setmonofont{DejaVuSansMono}
 	\setmainfont[
-	        Ligatures=TeX,
-	        BoldFont=DejaVuSerifCondensed-Bold,
-	        ItalicFont=DejaVuSerifCondensed-Italic,
+		Ligatures=TeX,
+		BoldFont=DejaVuSerifCondensed-Bold,
+		ItalicFont=DejaVuSerifCondensed-Italic,
 	]{DejaVuSerifCondensed}
 	\usepackage[colorlinks]{hyperref}
 	\MakeShortVerb{‡}
@@ -856,9 +858,9 @@ do_presets () {
 	\def\S#1{\textsl{#1}}
 	\def\F#1{\textsf{#1}}
 	\parindent0pt\parskip1ex
-	\definecolor{verbblue}  {HTML}{023a72}
-	\definecolor{kopred}    {HTML}{aa0000}
-	\definecolor{kopgreen}  {HTML}{007700}
+	\definecolor{verbblue}	{HTML}{023a72}
+	\definecolor{kopred}	{HTML}{aa0000}
+	\definecolor{kopgreen}	{HTML}{007700}
 	\makeatletter
 	\def\hrulefill{\leavevmode\leaders\hrule height 2pt\hfill\kern\z@}
 	\def\V{\color{verbblue}}\def\K{\color{black}\xspace}
@@ -893,8 +895,8 @@ test $# -eq 1 || die "I need 1 input file"
 fnd "$1"
 
 cat <<-EOF 1>&2
-	script:  ${1##*/} - $short
-	type:    $type
+	script:	 ${1##*/} - $short
+	type:	 $type
 	version: ${scriptversion:-?????}
 	EOF
 
@@ -930,32 +932,32 @@ for ext in "${outext[@]}"; do
 	    ((DOCblocks++))
 	    case $DOCblocks in
 	    (2) [[ $ext == 1 ]] && break 2
-	        if [[ $ext == pdf ]]; then
-	           # change header font color for function documentation
-	           kopcolor='\color{kopgreen}'
-	        else
-	           kopcolor=' class="sub">'
-	        fi
-	        # after the first DOC block, documentation is for
-	        # functions:
-	        sep=$functionsused$horrule
-	        ;;
+		if [[ $ext == pdf ]]; then
+		   # change header font color for function documentation
+		   kopcolor='\color{kopgreen}'
+		else
+		   kopcolor=' class="sub">'
+		fi
+		# after the first DOC block, documentation is for
+		# functions:
+		sep=$functionsused$horrule
+		;;
 	    (3) sep=$horrule
-	        ;;
+		;;
 	    esac
 	 else
 	    if [[ $line =~ ^[[:space:]] ]]; then
 	       # line starting with spaces is start of verbatim
 	       # read lines until one found starting with non-space
 	       # and enclose all in begin/end verbatim
-	       printf '\n%s\n' "$bcode"
-	       prverb "${line##+( )}"
+	       printf '%s' "$bcode"
+	       prverb "$line"
 	       echo
 	       rline
 	       while [[ $line =~ ^[[:space:]] ]]; do
-	          prverb "${line##+( )}"
-	          echo
-	          rline
+		  prverb "$line"
+		  echo
+		  rline
 	       done
 	       printf '%s\n' "$ecode"
 	       repeat=true # last line to be used again
@@ -969,24 +971,24 @@ for ext in "${outext[@]}"; do
 	       #     3. the text
 	       re='^([- ]) (.*)'
 	       while [[ $line =~ $re ]]; do
-	          if [[ $line =~ ^- ]]; then
-	             printf '%s\n' "$item"
-	             printout "${line:2}"
-	             echo
-	             rline
-	          elif [[ $line =~ ^\ {3} ]]; then
-	             printf '%s\n' "$bcode"
-	             while [[ $line =~ ^\ {3} ]]; do
-	                prverb "${line##+( )}"
-	                echo 
-	                rline
-	             done
-	             printf '%s\n' "$ecode"
-	          else
-	             printout "$line"
-	             echo
-	             rline
-	          fi
+		  if [[ $line =~ ^- ]]; then
+		     printf '%s\n' "$item"
+		     printout "${line:2}"
+		     echo
+		     rline
+		  elif [[ $line =~ ^\ {3} ]]; then
+		     printf '%s\n' "$bcode"
+		     while [[ $line =~ ^\ {3} ]]; do
+			prverb "${line##+( )}"
+			echo 
+			rline
+		     done
+		     printf '%s\n' "$ecode"
+		  else
+		     printout "$line"
+		     echo
+		     rline
+		  fi
 	       done
 	       printf '%s\n' "$ecompact"
 	       repeat=true # last line to be used again
@@ -1004,15 +1006,15 @@ for ext in "${outext[@]}"; do
 	       #    make a normal table (tabll), with columns wide enough
 	       #    for the content
 	       if [[ -z ${line##*	} ]]; then
-	          printf '%s\n' "$btabpX"
+		  printf '%s' "$btabpX"
 	       else
-	          printf '%s\n' "$btablX"
+		  printf '%s' "$btablX"
 	       fi
 	       while [[ $line =~ $'\t' ]]; do
-	          tabrow
-	          rline
+		  tabrow
+		  rline
 	       done
-	       printf '%s\n' "$etab"
+	       printf '%s' "$etab"
 	       repeat=true # last line to be used again
 	    elif [[ "$line" =~ ^=\ $base\ -\ (.*) ]]; then
 	       HEAD "$base" "${BASH_REMATCH[1]}" 
@@ -1035,28 +1037,30 @@ for ext in "${outext[@]}"; do
       }
    done < <(
       if [[ $(file --mime-encoding -bL "$bindir/$base") == binary ]]; then
-         verb "binary file: get the DOC with the -H option"
-         "$bindir/$base" -H
+	 verb "binary file: get the DOC with the -H option"
+	 "$bindir/$base" -H
       else
-         tmp=$(mktemp -t "$Myname".XXXXXXXXXX)
-         verb "extract the DOC sections"
-         sed -n "
-             /^:\?<<'DOC'/,/^DOC/{
-                     /^DOC/d
-                     s/^:\?<<'DOC'.*/===/
-                     p
-             }" "$bindir/$base" >"$tmp"
-         # join lines starting with a tab and a non-space character,
-         # to fill available space
-         sed '/^\t\+[^ ]/!{p;d}; :a; N; s/\n\t\+\([^ ]\)/ \1/;ta' "$tmp"
+	 tmp=$(mktemp -t "$Myname".XXXXXXXXXX)
+	 verb "extract the DOC sections"
+	 sed -n "
+	     /^:\?<<'DOC'/,/^DOC/{
+		     /^DOC/d
+		     s/^:\?<<'DOC'.*/===/
+		     p
+	     }" "$bindir/$base" >"$tmp"
+	 # join lines starting with a tab and a non-space character,
+	 # to fill available space
+	 sed '/^\t\+[^ ]/!{p;d}; :a; N; s/\n\t\+\([^ ]\)/ \1/;ta' "$tmp"
       fi
       rm -f "$tmp"
    ) |
    sed -e 's/\t//g;			     # remove tabs
-	   s/<pre><\/pre>//g;                # remove empty <pre>s
-           s/‡\\‡/‡\\ ‡/g;                   # make ‡\‡ possible in latex
-           s/☠/\//g;s/☣/\\/g;s/☡/</g;s/☢/>/g # restore [/\<>]
-          ' >>"$outfile"
+	   s/<pre><\/pre>//g;		     # remove empty <pre>s
+	   s/‡\\‡/‡\\ ‡/g;		     # make ‡\‡ possible in latex
+	   s/☠/\//g;s/☣/\\/g;s/☡/</g;s/☢/>/g # restore [/\<>]
+	   /\.RE/{N;N;N;s/\.RE\n\n\.RS\n//}  # combine empty 1st cells to multirow
+	  ' |
+   cat -s >>"$outfile"
    
    if [[ $ext == pdf ]]; then 
       echo x | lualatex "$outfile" &>/dev/null ||
