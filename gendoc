@@ -29,13 +29,10 @@ search fails, the script is supposed to be in the current directory.
 = Description
 gendoc is a Bash script that looks for gendoc-formatted documentation in a
 script, and converts it to three kinds of documentation:
-
-- a web page; it is placed in a directory |html|, next to the
-  directory in which the script resides. So if the script is
-  |/local/bin/test|, the html documentation will be |/local/html/test.html|.
-
+- a web page; it is placed in a directory |html|, next to the directory in
+  which the script resides. So if the script is |/local/bin/test|, the html
+  documentation will be |/local/html/test.html|.
 - a pdf document; it is placed in |/local/pdf/test.pdf|.
-
 - a man page; it is placed in |/local/man/man1/test.1|.
 
 If you do not want all three documents, you can specify the ones you
