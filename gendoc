@@ -721,7 +721,7 @@ do_presets () {
       bcode=""
       ecode=""
       bcompact="$n.IP ‣ 2"
-      ecompact="$n"
+      ecompact="$n.PP"
       edoc=''
       bHead="$n.SH "
       eHead=''
