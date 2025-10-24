@@ -1,6 +1,6 @@
 #!/bin/bash
 
-Version=2.02
+Version=2.03
 Myname="${0##*/}"
 shopt -s extglob
 
@@ -138,10 +138,13 @@ cd to the directory containing the scripts and run:
    for i in $(grep -d skip -l "^:<<'DOC'" *); do gendoc ./$i; done
 
 = Author
-[Wybo Dekker](wybo@dekkerdocumenten.nl)
+[Wybo Dekker](wybodekker@me.com)
 
 = Copyright
 Released under the [GNU General Public License](www.gnu.org/copyleft/gpl.html)
+
+= See also
+instscript(1), scriptinfo(1)
 DOC
 
 set -f # no globbing
@@ -884,6 +887,7 @@ do_presets () {
 
 excheck getopt scriptinfo uudecode lualatex
 
+docdir=''
 handle_options "$@"
 set -- "${args[@]}"
 
