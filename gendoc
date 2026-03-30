@@ -1,6 +1,6 @@
 #!/bin/bash
 
-Version=2.02
+Version=2.04
 Myname="${0##*/}"
 shopt -s extglob
 
@@ -75,14 +75,13 @@ possible.  Currently these are:
 		space-prefixed lines.
 [...](...)	prints first argument and links it to url in the second
 		argument. In the latter, don´t use |mailto:|, |http://|
-		or |https://| prefixes: they will be removed and replaced.
-		If the link contains an @ character, |mailto:|
-		will automatically be added, otherwise, |http://| will
-		automatically be inserted. So you can simply write:
+		or |https://| prefixes. If the link contains an @ character,
+		|mailto:| will automatically be added, otherwise, |http://|
+		will automatically be inserted. So you can simply write:
 		|[mail me](bc@def.com)| or |[Google](www.google.com)|.
 		If the first argument is empty, it will be replaced with 
 		the link, after stripping any prefix. so you can write:
-		||See [](www.google.com)|.
+		|See [](www.google.com)|.
 Red{...}	prints its argument in Red{red} color
 Green{...}	prints its argument in Green{green} color
 Blue{...}	prints its argument in Blue{blue} color
@@ -135,23 +134,38 @@ from the first heading.
 = Recreate all docs
 If for some reason a |pdf| subdirectory needs to be regenerated, then
 cd to the directory containing the scripts and run:
-   for i in $(grep -d skip -l "^:<<'DOC'" *); do gendoc ./$i; done
+   for i in $(grep -d skip -l "^:<<'DOC'" *); do
+      gendoc ./$i
+   done
 
 = Author
-[Wybo Dekker](wybo@dekkerdocumenten.nl)
+[Wybo Dekker](wybodekker@me.com).
 
 = Copyright
 Released under the [GNU General Public License](www.gnu.org/copyleft/gpl.html)
+
+= See also
+instscript(1), scriptinfo(1)
 DOC
 
 set -f # no globbing
 
-REd='\e[38;5;9m' Mag='\e[38;5;5m' Nor='\e[0m'
-    die() { local i; for i; do echo -e "$Myname: $REd$i$Nor"; done 1>&2; exit 1; }
-   Warn() { local i; for i; do echo -e "$Myname: $Mag$i$Nor"; done 1>&2; }
-helpsrt() { sed -n '/^= Synopsis/,/^= /p' "$0"|sed '1d;$d'; exit; }
-helpall() { sed -n "/^:<<'DOC'$/,/^DOC/p" "$0"|sed '1d;$d'|
-            less -P"$Myname-${Version/./·} (press h for help, q to quit)";exit; }
+# --- colors ---------------------------------------------------------------
+Red='' Mag='' Nor=''
+[ -t 1 ] && command -v tput >/dev/null && (( $(tput colors) >= 8 )) && { 
+  Red=$(tput bold && tput setaf 1) 
+  Mag=$(tput bold && tput setaf 5) 
+  Nor=$(tput sgr0)
+} 
+
+# --- utils ----------------------------------------------------------------
+    die() { local i; for i; do echo -e "$Myname: $Red$i$Nor"; done >&2; exit 1; } 
+   Warn() { local i; for i; do echo -e "$Myname: $Mag$i$Nor"; done >&2; } 
+   warn() { $verbose && Warn "$@"; }
+
+# --- help from embedded doc ----------------------------------------------
+helpsrt() { sed -n '/^= Synopsis/,/^= /p' "$0"|sed '1d;$d'; exit 0; } 
+helpall() { sed -n "/^:<<'DOC'$/,/^DOC/p" "$0"|sed '1d;$d'| less; exit; }
 
 :<<'DOC' #----------------------------------------------------------------------
 = excheck
@@ -405,7 +419,7 @@ tabrow() {
       if [[ $b =~ ^([[:space:]]+.*) ]]; then
 	 printf "%s" "$bverb"
 	 prverb "${BASH_REMATCH[1]##+( )}"
-	 printf '%s\n' "$everb"
+	 printf '%s' "$everb"
       else
 	 printout "$b"
       fi
@@ -454,14 +468,12 @@ description:	Prints the argument with converted/protected links.
 		in advance, protecting |/|'s, |<|'s, |>|'s and |\|'s
 		with U+2620, U+2621, U+2622 and U+2623 respectively. 
 		The |X| is the representation of the link. If empty, the 
-		link itself is used, without any prefix like |http://|.
+		link itself is used.
 		The |Y| is the link. It may be an email address
-		(possibly prefixed with |mailto:|) or a URL like
-		|x.y.z/a/b|, possibly prefixed with |http://| or
-		|https://|.  
+		or a URL like |x.y.z/a/b|.  
 		For html and pdf, the final link will then replace the
-		|[...](...)| version, proctecting special characters as
-		described.
+		|[...](...)| version, prefixed with mailto: or https:// and 
+		protecting special characters as described.
 		For man pages, |http://| and |mailto:| prefixes are
 		not needed, and |[X](Y)| will be replaced with |Y (X)|
 		or, if |X| and |Y| are identical, with just |X|. 
@@ -479,9 +491,6 @@ cpurl() { local lnk txt lft rgt arg parens
       lft="${BASH_REMATCH[1]}"
       txt="${BASH_REMATCH[2]}"
       lnk="${BASH_REMATCH[3]}"
-      lnk="${lnk#mailto:}"
-      lnk="${lnk#http://}"
-      lnk="${lnk#https://}"
       txt="${txt:-$lnk}"
       rgt="${BASH_REMATCH[4]% }"
    else
@@ -489,19 +498,18 @@ cpurl() { local lnk txt lft rgt arg parens
       return
    fi
 
-   if [[ $ext == 1 ]]; then
-      # for man pages prefixes are not needed
-      lnk=${lnk#http://}
-      lnk=${lnk#https://}
-   elif [[ $lnk =~ @ ]]; then
-      # add mailto: for html and tex/pdf 
-      lnk="mailto:$lnk"
-   elif [[ ! $lnk =~ http: ]]; then
-      # add http:// if it's missing,
-      # protect / with U+2620 (☠)
-      lnk="http:☠☠${lnk//\//☠}"
+   if [[ $ext != 1 ]]; then
+      case $lnk in
+      (*@*) # add mailto:
+         lnk="mailto:$lnk"
+         ;;
+      (*) # add https://
+         lnk="https://$lnk"
+         ;;
+      esac
    fi
 
+   lnk="${lnk//\//☠}" # protect / by replacing it with ☠
    case "$ext" in
    (1)	  if $parens; then
 	     printf '%s (%s)%s' "$lft$txt" "$lnk" "$rgt"
@@ -718,9 +726,9 @@ do_presets () {
 	fi
       ;;
    (1)
-      bcode=""
-      ecode=""
-      bcompact="$n.IP ‣ 2"
+      bcode="$n\\fB"
+      ecode="$n\\fP"
+      bcompact="$n.PD 0$n.IP ‣ 2"
       ecompact="$n.PP"
       edoc=''
       bHead="$n.SH "
@@ -730,15 +738,15 @@ do_presets () {
       eRow=''
       bRow=''
       brow=''
-      mrow="$n.RS$n"
-      erow="$n.RE"
-      btablX="$n"
-      btabpX="$n"
-      etab="$n"
-      bverb="$n.B "
-      everb=''
+      mrow="@T{$n"
+      erow="${n}T}$n"
+      btablX="$n.TS${n}tab (@);${n}l lx.$n"
+      btabpX="$n.TS${n}tab (@);${n}l lx.$n"
+      etab="$n.TE$n"
+      bverb='\fB'
+      everb='\fP'
       ext=1
-      item="$n.IP ‣ 2"
+      item=".IP ‣ 2"
       kopcolor=''
       par="$n"
 
@@ -884,6 +892,7 @@ do_presets () {
 
 excheck getopt scriptinfo uudecode lualatex
 
+docdir=''
 handle_options "$@"
 set -- "${args[@]}"
 
